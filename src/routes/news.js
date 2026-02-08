@@ -1,132 +1,39 @@
 const express = require('express');
-const jwt = require('jsonwebtoken');
 const router = express.Router();
 
-// Middleware: Verify JWT
-const verifyToken = (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  
-  if (!token) {
-    return res.status(401).json({ error: 'No token provided' });
-  }
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (err) {
-    res.status(401).json({ error: 'Invalid token' });
-  }
-};
-
-// Get all news (sorted by newest first)
-router.get('/', verifyToken, async (req, res) => {
-  try {
-    const pool = req.app.locals.pool;
-    const result = await pool.query(`
-      SELECT n.*, u.username, 
-             (SELECT COUNT(*) FROM news_likes WHERE news_id = n.id) as likes_count,
-             (SELECT COUNT(*) FROM news_comments WHERE news_id = n.id) as comments_count,
-             (SELECT EXISTS(SELECT 1 FROM news_likes WHERE news_id = n.id AND user_id = $1)) as user_liked
-      FROM news n
-      JOIN users u ON n.created_by = u.id
-      ORDER BY n.created_at DESC
-    `,
-    [req.user.id]);
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+// Get all news articles
+router.get('/', (req, res) => {
+    // Logic to retrieve all news articles
+    res.send('Retrieve all news articles');
 });
 
-// Create news (only admin)
-router.post('/', verifyToken, async (req, res) => {
-  try {
-    const pool = req.app.locals.pool;
-    
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Only admins can create news' });
-    }
-
-    const { title, description, short_description, image_url, file_url } = req.body;
-
-    const result = await pool.query(
-      'INSERT INTO news (title, description, short_description, image_url, file_url, created_by) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-      [title, description, short_description, image_url, file_url, req.user.id]
-    );
-
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+// Get news article by ID
+router.get('/:id', (req, res) => {
+    const id = req.params.id;
+    // Logic to retrieve news article by ID
+    res.send(`Retrieve news article with ID: ${id}`);
 });
 
-// Like news
-router.post('/:id/like', verifyToken, async (req, res) => {
-  try {
-    const pool = req.app.locals.pool;
-    const { id } = req.params;
-
-    await pool.query(
-      'INSERT INTO news_likes (news_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-      [id, req.user.id]
-    );
-
-    const result = await pool.query('SELECT COUNT(*) as likes_count FROM news_likes WHERE news_id = $1', [id]);
-    res.json({ likes_count: parseInt(result.rows[0].likes_count) });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+// Create a new news article
+router.post('/', (req, res) => {
+    const newArticle = req.body;
+    // Logic to create a new news article
+    res.send('New news article created');
 });
 
-// Unlike news
-router.post('/:id/unlike', verifyToken, async (req, res) => {
-  try {
-    const pool = req.app.locals.pool;
-    const { id } = req.params;
-
-    await pool.query('DELETE FROM news_likes WHERE news_id = $1 AND user_id = $2', [id, req.user.id]);
-
-    const result = await pool.query('SELECT COUNT(*) as likes_count FROM news_likes WHERE news_id = $1', [id]);
-    res.json({ likes_count: parseInt(result.rows[0].likes_count) });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+// Update news article by ID
+router.put('/:id', (req, res) => {
+    const id = req.params.id;
+    const updatedArticle = req.body;
+    // Logic to update news article by ID
+    res.send(`Updated news article with ID: ${id}`);
 });
 
-// Add comment
-router.post('/:id/comments', verifyToken, async (req, res) => {
-  try {
-    const pool = req.app.locals.pool;
-    const { id } = req.params;
-    const { comment } = req.body;
-
-    const result = await pool.query(
-      'INSERT INTO news_comments (news_id, user_id, comment) VALUES ($1, $2, $3) RETURNING *',
-      [id, req.user.id, comment]
-    );
-
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Get comments
-router.get('/:id/comments', verifyToken, async (req, res) => {
-  try {
-    const pool = req.app.locals.pool;
-    const result = await pool.query(`
-      SELECT nc.*, u.username 
-      FROM news_comments nc
-      JOIN users u ON nc.user_id = u.id
-      WHERE nc.news_id = $1
-      ORDER BY nc.created_at DESC
-    `, [req.params.id]);
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+// Delete news article by ID
+router.delete('/:id', (req, res) => {
+    const id = req.params.id;
+    // Logic to delete news article by ID
+    res.send(`Deleted news article with ID: ${id}`);
 });
 
 module.exports = router;
