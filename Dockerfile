@@ -1,12 +1,23 @@
-FROM node:18-alpine
+# Dockerfile
 
+# Use the official Golang image as a base
+FROM golang:1.20
+
+# Set the Current Working Directory inside the container
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm install
+# Copy the Go Modules and Sum Files
+COPY go.mod .
+COPY go.sum .
 
+# Download all dependencies. Dependencies will be cached if the go.mod and go.sum files are not changed
+RUN go mod download
+
+# Copy the source code into the container
 COPY . .
 
-EXPOSE 3000
+# Build the Go app
+RUN go build -o main .
 
-CMD ["npm", "run", "dev"]
+# Command to run the executable
+CMD ["./main"]
